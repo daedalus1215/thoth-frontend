@@ -1,11 +1,21 @@
 <template>
   <div class="audio-recorder">
-    <q-btn
-      :color="isRecording ? 'negative' : 'primary'"
-      :icon="isRecording ? 'stop' : 'mic'"
-      :label="isRecording ? 'Stop Recording' : 'Start Recording'"
-      @click="toggleRecording"
-    />
+    <div class="controls q-mb-md">
+      <q-btn
+        :color="isRecording ? 'negative' : 'primary'"
+        :icon="isRecording ? 'stop' : 'mic'"
+        :label="isRecording ? 'Stop Recording' : 'Start Recording'"
+        @click="toggleRecording"
+        class="q-mr-sm"
+      />
+      <q-btn
+        color="secondary"
+        icon="clear"
+        label="Clear"
+        @click="clearTranscription"
+        :disable="!transcription"
+      />
+    </div>
 
     <div v-if="transcription" class="transcription q-mt-md">
       <p>{{ transcription }}</p>
@@ -18,7 +28,6 @@ import { ref, onBeforeUnmount } from 'vue'
 
 const isRecording = ref(false)
 const transcription = ref('')
-let mediaRecorder: MediaRecorder | null = null
 let websocket: WebSocket | null = null
 let audioContext: AudioContext | null = null
 let mediaStreamSource: MediaStreamAudioSourceNode | null = null
@@ -40,7 +49,10 @@ const initializeWebSocket = () => {
   websocket.onmessage = (event) => {
     const data = JSON.parse(event.data)
     if (data.transcription) {
-      transcription.value = data.transcription
+      // Append new transcription with a space
+      transcription.value = transcription.value
+        ? `${transcription.value} ${data.transcription}`
+        : data.transcription
     }
   }
 
@@ -53,6 +65,10 @@ const initializeWebSocket = () => {
     console.log('WebSocket connection closed')
     stopRecording()
   }
+}
+
+const clearTranscription = () => {
+  transcription.value = ''
 }
 
 const startRecording = async () => {
@@ -137,5 +153,12 @@ onBeforeUnmount(() => {
   background-color: #f5f5f5;
   border-radius: 4px;
   white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
 }
 </style>
