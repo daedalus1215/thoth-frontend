@@ -20,6 +20,9 @@ const isRecording = ref(false)
 const transcription = ref('')
 let mediaRecorder: MediaRecorder | null = null
 let websocket: WebSocket | null = null
+let audioContext: AudioContext | null = null
+let mediaStreamSource: MediaStreamAudioSourceNode | null = null
+let processor: ScriptProcessorNode | null = null
 
 // Configure audio constraints
 const audioConstraints = {
@@ -59,24 +62,28 @@ const startRecording = async () => {
     // Initialize WebSocket connection
     initializeWebSocket()
 
-    mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus',
+    // Create Audio Context
+    audioContext = new AudioContext({
+      sampleRate: 16000,
     })
 
-    mediaRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0 && websocket?.readyState === WebSocket.OPEN) {
-        // Convert blob to Float32Array
-        const arrayBuffer = await event.data.arrayBuffer()
-        const audioData = await new AudioContext().decodeAudioData(arrayBuffer)
-        const float32Array = audioData.getChannelData(0)
+    // Create source from stream
+    mediaStreamSource = audioContext.createMediaStreamSource(stream)
 
-        // Send the audio data as bytes
-        websocket.send(float32Array.buffer)
+    // Create script processor for raw audio data
+    processor = audioContext.createScriptProcessor(4096, 1, 1)
+
+    processor.onaudioprocess = (e) => {
+      if (websocket?.readyState === WebSocket.OPEN) {
+        const inputData = e.inputBuffer.getChannelData(0)
+        websocket.send(inputData.buffer)
       }
     }
 
-    // Set a small timeslice to get frequent chunks (e.g., 100ms)
-    mediaRecorder.start(100)
+    // Connect the nodes
+    mediaStreamSource.connect(processor)
+    processor.connect(audioContext.destination)
+
     isRecording.value = true
   } catch (error) {
     console.error('Error starting recording:', error)
@@ -84,9 +91,19 @@ const startRecording = async () => {
 }
 
 const stopRecording = () => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop()
-    mediaRecorder.stream.getTracks().forEach((track) => track.stop())
+  if (processor) {
+    processor.disconnect()
+    processor = null
+  }
+
+  if (mediaStreamSource) {
+    mediaStreamSource.disconnect()
+    mediaStreamSource = null
+  }
+
+  if (audioContext) {
+    audioContext.close()
+    audioContext = null
   }
 
   if (websocket && websocket.readyState === WebSocket.OPEN) {
