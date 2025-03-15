@@ -1,81 +1,141 @@
-<script setup>
-import { ref } from 'vue'
+<template>
+  <div class="audio-recorder">
+    <q-btn
+      :color="isRecording ? 'negative' : 'primary'"
+      :icon="isRecording ? 'stop' : 'mic'"
+      :label="isRecording ? 'Stop Recording' : 'Start Recording'"
+      @click="toggleRecording"
+    />
 
-const mediaRecorder = ref(null)
-const audioChunks = ref([])
+    <div v-if="transcription" class="transcription q-mt-md">
+      <p>{{ transcription }}</p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onBeforeUnmount } from 'vue'
+
 const isRecording = ref(false)
-const audioUrl = ref(null)
+const transcription = ref('')
+let mediaRecorder: MediaRecorder | null = null
+let websocket: WebSocket | null = null
+let audioContext: AudioContext | null = null
+let mediaStreamSource: MediaStreamAudioSourceNode | null = null
+let processor: ScriptProcessorNode | null = null
+
+// Configure audio constraints
+const audioConstraints = {
+  audio: {
+    sampleRate: 16000,
+    channelCount: 1,
+    echoCancellation: true,
+    noiseSuppression: true,
+  },
+}
+
+const initializeWebSocket = () => {
+  websocket = new WebSocket('ws://localhost:8000/stream-audio')
+
+  websocket.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (data.transcription) {
+      transcription.value = data.transcription
+    }
+  }
+
+  websocket.onerror = (error) => {
+    console.error('WebSocket error:', error)
+    stopRecording()
+  }
+
+  websocket.onclose = () => {
+    console.log('WebSocket connection closed')
+    stopRecording()
+  }
+}
 
 const startRecording = async () => {
   try {
-    // Request permission to access the microphone
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const stream = await navigator.mediaDevices.getUserMedia(audioConstraints)
 
-    // Create a MediaRecorder instance to capture audio
-    mediaRecorder.value = new MediaRecorder(stream)
+    // Initialize WebSocket connection
+    initializeWebSocket()
 
-    // Start recording
-    mediaRecorder.value.start()
+    // Create Audio Context
+    audioContext = new AudioContext({
+      sampleRate: 16000,
+    })
+
+    // Create source from stream
+    mediaStreamSource = audioContext.createMediaStreamSource(stream)
+
+    // Create script processor for raw audio data
+    processor = audioContext.createScriptProcessor(4096, 1, 1)
+
+    processor.onaudioprocess = (e) => {
+      if (websocket?.readyState === WebSocket.OPEN) {
+        const inputData = e.inputBuffer.getChannelData(0)
+        websocket.send(inputData.buffer)
+      }
+    }
+
+    // Connect the nodes
+    mediaStreamSource.connect(processor)
+    processor.connect(audioContext.destination)
+
     isRecording.value = true
-    audioChunks.value = []
-
-    // When audio data is available, push it to the audioChunks array
-    mediaRecorder.value.ondataavailable = (event) => {
-      audioChunks.value.push(event.data)
-    }
-
-    // When the recording is stopped, create a blob URL from the audio chunks
-    mediaRecorder.value.onstop = () => {
-      const audioBlob = new Blob(audioChunks.value, { type: 'audio/wav' })
-      audioUrl.value = URL.createObjectURL(audioBlob)
-
-      // You can also send the audio to your backend API for ASR processing
-      uploadAudio(audioBlob)
-    }
-  } catch (err) {
-    console.error('Error accessing microphone: ', err)
+  } catch (error) {
+    console.error('Error starting recording:', error)
   }
 }
 
 const stopRecording = () => {
-  mediaRecorder.value.stop()
+  if (processor) {
+    processor.disconnect()
+    processor = null
+  }
+
+  if (mediaStreamSource) {
+    mediaStreamSource.disconnect()
+    mediaStreamSource = null
+  }
+
+  if (audioContext) {
+    audioContext.close()
+    audioContext = null
+  }
+
+  if (websocket && websocket.readyState === WebSocket.OPEN) {
+    websocket.close()
+  }
+
   isRecording.value = false
 }
 
-const uploadAudio = (blob) => {
-  const formData = new FormData()
-  formData.append('audio', blob)
-
-  // Replace this with your backend endpoint
-  fetch('http://localhost:8080/upload', {
-    method: 'POST',
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log('Audio uploaded successfully:', data)
-    })
-    .catch((error) => {
-      console.error('Error uploading audio:', error)
-    })
+const toggleRecording = () => {
+  if (isRecording.value) {
+    stopRecording()
+  } else {
+    startRecording()
+  }
 }
+
+// Cleanup on component unmount
+onBeforeUnmount(() => {
+  stopRecording()
+})
 </script>
 
-<template>
-  <q-page>
-    <q-btn @click="startRecording" label="Start Recording" color="primary" />
-    <q-btn
-      @click="stopRecording"
-      label="Stop Recording"
-      color="secondary"
-      :disable="!isRecording"
-    />
-    <audio v-if="audioUrl" :src="audioUrl" controls />
-  </q-page>
-</template>
-
 <style scoped>
-.q-btn {
-  margin: 10px;
+.audio-recorder {
+  padding: 1rem;
+}
+
+.transcription {
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  white-space: pre-wrap;
 }
 </style>
