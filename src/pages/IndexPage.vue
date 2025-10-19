@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import AudioRecorder from 'components/AudioRecorder/AudioRecorder.vue'
+import AudioRecorder from '../components/AudioRecorder/AudioRecorder.vue'
 
 export default {
   components: {

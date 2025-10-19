@@ -51,6 +51,11 @@
               color="primary"
               class="q-mb-md"
             />
+            
+            <!-- Progress Text -->
+            <div v-if="isUploading" class="text-center text-caption text-grey-6 q-mb-md">
+              Processing audio file... This may take a moment for longer files.
+            </div>
 
             <!-- Error Message -->
             <q-banner
@@ -132,7 +137,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { transcriptionAPI } from 'src/services/transcriptionAPI'
+import { transcriptionAPI } from '../services/transcriptionAPI'
 
 const $q = useQuasar()
 
