@@ -58,7 +58,10 @@ let audioContext: AudioContext | null = null
 let mediaStreamSource: MediaStreamAudioSourceNode | null = null
 let processor: ScriptProcessorNode | null = null
 
-// Configure audio constraints - start with basic constraints
+// Configure audio constraints from environment variables
+const audioSampleRate = import.meta.env.VITE_AUDIO_SAMPLE_RATE || 16000
+const audioChannels = import.meta.env.VITE_AUDIO_CHANNELS || 1
+
 const audioConstraints = {
   audio: true, // Start with basic audio access
 }
@@ -66,13 +69,16 @@ const audioConstraints = {
 // Fallback constraints if the first attempt fails
 const fallbackConstraints = {
   audio: {
+    sampleRate: parseInt(audioSampleRate),
+    channelCount: parseInt(audioChannels),
     echoCancellation: true,
     noiseSuppression: true,
   },
 }
 
 const initializeWebSocket = () => {
-  websocket = new WebSocket('ws://localhost:8000/stream-audio')
+  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'
+  websocket = new WebSocket(`${wsBaseUrl}/stream-audio`)
 
   websocket.onmessage = (event) => {
     const data = JSON.parse(event.data)
@@ -146,10 +152,13 @@ const startRecording = async () => {
     // Create Audio Context with fallback sample rate
     try {
       audioContext = new AudioContext({
-        sampleRate: 16000,
+        sampleRate: parseInt(audioSampleRate),
       })
     } catch (contextError) {
-      console.warn('Failed to create AudioContext with 16kHz, using default:', contextError)
+      console.warn(
+        `Failed to create AudioContext with ${audioSampleRate}Hz, using default:`,
+        contextError,
+      )
       audioContext = new AudioContext()
     }
 

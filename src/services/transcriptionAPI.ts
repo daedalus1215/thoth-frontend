@@ -2,8 +2,8 @@
 export class TranscriptionAPI {
   private baseURL: string
 
-  constructor(baseURL: string = 'http://localhost:8000') {
-    this.baseURL = baseURL
+  constructor(baseURL?: string) {
+    this.baseURL = baseURL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   }
 
   /**
@@ -19,7 +19,7 @@ export class TranscriptionAPI {
         body: formData,
         // Add headers for CORS
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         // Ensure credentials are included if needed
         credentials: 'include',
@@ -34,7 +34,9 @@ export class TranscriptionAPI {
     } catch (error) {
       // Handle CORS and network errors
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.')
+        throw new Error(
+          'Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.',
+        )
       }
       throw error
     }
@@ -43,9 +45,14 @@ export class TranscriptionAPI {
   /**
    * Upload and transcribe multiple audio files
    */
-  async transcribeBatch(files: File[]): Promise<{ transcriptions: Array<{ filename: string; transcription: string }>; count: number }> {
+  async transcribeBatch(
+    files: File[],
+  ): Promise<{
+    transcriptions: Array<{ filename: string; transcription: string }>
+    count: number
+  }> {
     const formData = new FormData()
-    files.forEach(file => {
+    files.forEach((file) => {
       formData.append('files', file)
     })
 
@@ -54,7 +61,7 @@ export class TranscriptionAPI {
         method: 'POST',
         body: formData,
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         credentials: 'include',
       })
@@ -67,7 +74,9 @@ export class TranscriptionAPI {
       return await response.json()
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.')
+        throw new Error(
+          'Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.',
+        )
       }
       throw error
     }
@@ -91,7 +100,7 @@ export class TranscriptionAPI {
     try {
       const response = await fetch(`${this.baseURL}/performance`, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         credentials: 'include',
       })
@@ -103,7 +112,9 @@ export class TranscriptionAPI {
       return await response.json()
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.')
+        throw new Error(
+          'Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.',
+        )
       }
       throw error
     }
@@ -116,7 +127,7 @@ export class TranscriptionAPI {
     try {
       const response = await fetch(`${this.baseURL}/health`, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         credentials: 'include',
       })
@@ -128,7 +139,9 @@ export class TranscriptionAPI {
       return await response.json()
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.')
+        throw new Error(
+          'Network error: Unable to connect to the transcription service. Please check if the backend is running and CORS is configured correctly.',
+        )
       }
       throw error
     }
