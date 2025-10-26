@@ -1,52 +1,3 @@
-<template>
-  <div class="audio-recorder">
-    <div class="controls q-mb-md">
-      <q-btn
-        :color="isRecording ? 'negative' : 'primary'"
-        :icon="isRecording ? 'stop' : 'mic'"
-        :label="isRecording ? 'Stop Recording' : 'Start Recording'"
-        @click="toggleRecording"
-        class="q-mr-sm"
-      />
-      <q-btn
-        color="secondary"
-        icon="clear"
-        label="Clear"
-        @click="clearTranscription"
-        :disable="!transcription"
-        class="q-mr-sm"
-      />
-      <q-btn
-        color="info"
-        icon="refresh"
-        label="Check Mic"
-        @click="initializeMicrophoneStatus"
-        size="sm"
-      />
-    </div>
-
-    <!-- Microphone Status -->
-    <div v-if="microphoneStatus" class="q-mb-md">
-      <q-banner
-        :class="microphoneStatus.available ? 'bg-positive text-white' : 'bg-negative text-white'"
-        rounded
-      >
-        <template v-slot:avatar>
-          <q-icon :name="microphoneStatus.available ? 'mic' : 'mic_off'" />
-        </template>
-        <div v-if="microphoneStatus.available">
-          Microphone available ({{ microphoneStatus.devices?.length || 0 }} device(s))
-        </div>
-        <div v-else>Microphone issue: {{ microphoneStatus.error }}</div>
-      </q-banner>
-    </div>
-
-    <div v-if="transcription" class="transcription q-mt-md">
-      <p>{{ transcription }}</p>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onBeforeUnmount } from 'vue'
 
@@ -241,6 +192,55 @@ onBeforeUnmount(() => {
   stopRecording()
 })
 </script>
+
+<template>
+  <div class="audio-recorder">
+    <div class="controls q-mb-md">
+      <q-btn
+        :color="isRecording ? 'negative' : 'primary'"
+        :icon="isRecording ? 'stop' : 'mic'"
+        :label="isRecording ? 'Stop Recording' : 'Start Recording'"
+        @click="toggleRecording"
+        class="q-mr-sm"
+      />
+      <q-btn
+        color="secondary"
+        icon="clear"
+        label="Clear"
+        @click="clearTranscription"
+        :disable="!transcription"
+        class="q-mr-sm"
+      />
+      <q-btn
+        color="info"
+        icon="refresh"
+        label="Check Mic"
+        @click="initializeMicrophoneStatus"
+        size="sm"
+      />
+    </div>
+
+    <!-- Microphone Status -->
+    <div v-if="microphoneStatus" class="q-mb-md">
+      <q-banner
+        :class="microphoneStatus.available ? 'bg-positive text-white' : 'bg-negative text-white'"
+        rounded
+      >
+        <template v-slot:avatar>
+          <q-icon :name="microphoneStatus.available ? 'mic' : 'mic_off'" />
+        </template>
+        <div v-if="microphoneStatus.available">
+          Microphone available ({{ microphoneStatus.devices?.length || 0 }} device(s))
+        </div>
+        <div v-else>Microphone issue: {{ microphoneStatus.error }}</div>
+      </q-banner>
+    </div>
+
+    <div v-if="transcription" class="transcription q-mt-md">
+      <p>{{ transcription }}</p>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .audio-recorder {
