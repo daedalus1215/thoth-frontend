@@ -83,7 +83,7 @@ export default defineConfig(() => {
       // Enable HTTPS for microphone access on remote hosts
       // For localhost-only development, set to false
       // @ts-ignore - Vite supports https: true for self-signed certs
-      https: process.env.QUASAR_DEV_HTTPS === 'true' ? true : false,
+      https: true,
       open: true, // opens browser window automatically
     },
 
