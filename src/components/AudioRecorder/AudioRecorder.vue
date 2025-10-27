@@ -1,52 +1,3 @@
-<template>
-  <div class="audio-recorder">
-    <div class="controls q-mb-md">
-      <q-btn
-        :color="isRecording ? 'negative' : 'primary'"
-        :icon="isRecording ? 'stop' : 'mic'"
-        :label="isRecording ? 'Stop Recording' : 'Start Recording'"
-        @click="toggleRecording"
-        class="q-mr-sm"
-      />
-      <q-btn
-        color="secondary"
-        icon="clear"
-        label="Clear"
-        @click="clearTranscription"
-        :disable="!transcription"
-        class="q-mr-sm"
-      />
-      <q-btn
-        color="info"
-        icon="refresh"
-        label="Check Mic"
-        @click="initializeMicrophoneStatus"
-        size="sm"
-      />
-    </div>
-
-    <!-- Microphone Status -->
-    <div v-if="microphoneStatus" class="q-mb-md">
-      <q-banner
-        :class="microphoneStatus.available ? 'bg-positive text-white' : 'bg-negative text-white'"
-        rounded
-      >
-        <template v-slot:avatar>
-          <q-icon :name="microphoneStatus.available ? 'mic' : 'mic_off'" />
-        </template>
-        <div v-if="microphoneStatus.available">
-          Microphone available ({{ microphoneStatus.devices?.length || 0 }} device(s))
-        </div>
-        <div v-else>Microphone issue: {{ microphoneStatus.error }}</div>
-      </q-banner>
-    </div>
-
-    <div v-if="transcription" class="transcription q-mt-md">
-      <p>{{ transcription }}</p>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onBeforeUnmount } from 'vue'
 
@@ -58,7 +9,10 @@ let audioContext: AudioContext | null = null
 let mediaStreamSource: MediaStreamAudioSourceNode | null = null
 let processor: ScriptProcessorNode | null = null
 
-// Configure audio constraints - start with basic constraints
+// Configure audio constraints from environment variables
+const audioSampleRate = import.meta.env.VITE_AUDIO_SAMPLE_RATE || 16000
+const audioChannels = import.meta.env.VITE_AUDIO_CHANNELS || 1
+
 const audioConstraints = {
   audio: true, // Start with basic audio access
 }
@@ -66,13 +20,16 @@ const audioConstraints = {
 // Fallback constraints if the first attempt fails
 const fallbackConstraints = {
   audio: {
+    sampleRate: parseInt(audioSampleRate),
+    channelCount: parseInt(audioChannels),
     echoCancellation: true,
     noiseSuppression: true,
   },
 }
 
 const initializeWebSocket = () => {
-  websocket = new WebSocket('ws://localhost:8000/stream-audio')
+  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'
+  websocket = new WebSocket(`${wsBaseUrl}/stream-audio`)
 
   websocket.onmessage = (event) => {
     const data = JSON.parse(event.data)
@@ -146,10 +103,13 @@ const startRecording = async () => {
     // Create Audio Context with fallback sample rate
     try {
       audioContext = new AudioContext({
-        sampleRate: 16000,
+        sampleRate: parseInt(audioSampleRate),
       })
     } catch (contextError) {
-      console.warn('Failed to create AudioContext with 16kHz, using default:', contextError)
+      console.warn(
+        `Failed to create AudioContext with ${audioSampleRate}Hz, using default:`,
+        contextError,
+      )
       audioContext = new AudioContext()
     }
 
@@ -232,6 +192,55 @@ onBeforeUnmount(() => {
   stopRecording()
 })
 </script>
+
+<template>
+  <div class="audio-recorder">
+    <div class="controls q-mb-md">
+      <q-btn
+        :color="isRecording ? 'negative' : 'primary'"
+        :icon="isRecording ? 'stop' : 'mic'"
+        :label="isRecording ? 'Stop Recording' : 'Start Recording'"
+        @click="toggleRecording"
+        class="q-mr-sm"
+      />
+      <q-btn
+        color="secondary"
+        icon="clear"
+        label="Clear"
+        @click="clearTranscription"
+        :disable="!transcription"
+        class="q-mr-sm"
+      />
+      <q-btn
+        color="info"
+        icon="refresh"
+        label="Check Mic"
+        @click="initializeMicrophoneStatus"
+        size="sm"
+      />
+    </div>
+
+    <!-- Microphone Status -->
+    <div v-if="microphoneStatus" class="q-mb-md">
+      <q-banner
+        :class="microphoneStatus.available ? 'bg-positive text-white' : 'bg-negative text-white'"
+        rounded
+      >
+        <template v-slot:avatar>
+          <q-icon :name="microphoneStatus.available ? 'mic' : 'mic_off'" />
+        </template>
+        <div v-if="microphoneStatus.available">
+          Microphone available ({{ microphoneStatus.devices?.length || 0 }} device(s))
+        </div>
+        <div v-else>Microphone issue: {{ microphoneStatus.error }}</div>
+      </q-banner>
+    </div>
+
+    <div v-if="transcription" class="transcription q-mt-md">
+      <p>{{ transcription }}</p>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .audio-recorder {
