@@ -3,7 +3,8 @@
 
 import { defineConfig } from '#q-app/wrappers'
 
-export default defineConfig((/* ctx */) => {
+// @ts-ignore - Vite supports https: true for self-signed certs
+export default defineConfig(() => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -79,7 +80,10 @@ export default defineConfig((/* ctx */) => {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
-      // https: true,
+      // Enable HTTPS for microphone access on remote hosts
+      // For localhost-only development, set to false
+      // @ts-ignore - Vite supports https: true for self-signed certs
+      https: process.env.QUASAR_DEV_HTTPS === 'true' ? true : false,
       open: true, // opens browser window automatically
     },
 
