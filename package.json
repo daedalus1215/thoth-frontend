@@ -2,7 +2,7 @@
   "name": "hermes-frontend",
   "version": "0.0.1",
   "description": "Front end testing out the ASR functionality",
-  "productName": "Hermes",
+  "productName": "Thoth",
   "author": "la la <13687739+daedalus1215@users.noreply.github.com>",
   "type": "module",
   "private": true,
